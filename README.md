@@ -12,3 +12,5 @@ In the process of learning HDL for RTL design, came across some widely used pher
 
 **Example Frame:** 1 Start + 8 Data + 1 Parity + 1 Stop = 11 total bits 
 
+## Flow Architecture
+

@@ -15,7 +15,7 @@ module baud_rate_generator(input clk, output tx_enb, output rx_enb);
         rx_counter <= rx_counter + 1'b1;
     end
   
-  assign tx_enb = tx_counter ? 1'b1 : 1'b0;
-  assign rx_enb = rx_counter ? 1'b1 : 1'b0;
+  assign tx_enb = (tx_counter == 0) ? 1'b1 : 1'b0;
+  assign rx_enb = (rx_counter == 0) ? 1'b1 : 1'b0;
                                              
 endmodule

@@ -11,3 +11,4 @@ In the process of learning HDL for RTL design, came across some widely used pher
 > | Stop bits  | 1–2       | Line idle high ending frame |
 
 **Example Frame:** 1 Start + 8 Data + 1 Parity + 1 Stop = 11 total bits 
+

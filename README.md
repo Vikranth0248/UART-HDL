@@ -3,7 +3,11 @@ In the process of learning HDL for RTL design, came across some widely used pher
 
 ## UART Data Packet Format
 
-![alt text](frame.png)
+> | Field      | Bit count | Description |
+> |------------|-----------|-------------|
+> | Start bit  | 1         | Always one sync bit (logic 0) |
+> | Data bits  | 5–9       | LSB-first payload bits |
+> | Parity bit | 0–1       | Optional even/odd parity |
+> | Stop bits  | 1–2       | Line idle high ending frame |
 
 **Example Frame:** 1 Start + 8 Data + 1 Parity + 1 Stop = 11 total bits 
-

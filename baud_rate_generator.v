@@ -1,9 +1,16 @@
-module baud_rate_generator(input clk, output tx_enb, output rx_enb);
+module baud_rate_generator(input clk, reset, output tx_enb, output rx_enb);
   reg [12:0] tx_counter = 0;
   reg [10:0] rx_counter = 0;
   
   always @(posedge clk)
     begin
+      if(reset) begin
+        rx_counter <= 0;
+        tx_counter <= 0;
+        tx_enb <= 0;
+        rx_enb <= 0;
+      end
+
       if (tx_counter == 5206)
         tx_counter = 0;
       else

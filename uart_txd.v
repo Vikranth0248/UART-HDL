@@ -1,69 +1,66 @@
-module uart_txd(input wr_enb, clk, rst, txd_enb, 
-                input [7:0] data_in,
-                output reg serial_data,
-                output busy);
+`timescale 1ns/1ps
 
-    parameter idle_state = 2'b00;
-    parameter start_state = 2'b01;
-    parameter data_state = 2'b10;
-    parameter stop_state = 2'b11;
+module uart_txd (
+    input clk,
+    input rst,
+    input tx_start,
+    input [7:0] tx_data,
+    input tx_tick,
+    output reg tx,
+    output reg tx_busy
+);
 
-    reg [1:0] state;
-    reg [2:0] index;
-    reg [7:0] data;
+localparam IDLE=0, START=1, DATA=2, STOP=3;
 
-    always@(posedge clk) begin
-        if(rst)
-            serial_data <= 1'b1;
-            state <= idle_state;
-            index <= 3'h0;
-            data <= 8'h0;
+reg [1:0] state;
+reg [3:0] bit_index;
+reg [7:0] data_reg;
+
+always @(posedge clk or posedge rst) begin
+    if (rst) begin
+        state <= IDLE;
+        tx <= 1;
+        tx_busy <= 0;
+    end else begin
+        case(state)
+
+        IDLE: begin
+            tx <= 1;
+            tx_busy <= 0;
+            if (tx_start) begin
+                data_reg <= tx_data;
+                state <= START;
+                tx_busy <= 1;
+            end
         end
 
-    always@(posedge clk) begin
-        case(state)
-            idle_state: begin
-            serial_data <= 1'b1;
-            index <= 3'b0;
-                if(wr_enb)
-                    state <= start_state;
+        START: begin
+            if (tx_tick) begin
+                tx <= 0;
+                state <= DATA;
+                bit_index <= 0;
             end
-                    
-            start_state: begin
-                if(txd_enb) begin
-                    serial_data <= 1'b0;
-                    state <= data_state;
-                    data <= data_in;
-                end
-            end
-                        
-            data_state: begin
-                if(txd_enb) begin
-                    if(index == 3'h7)
-                        state <= stop_state;
-                    else begin
-                        index <= index + 3'h1;
-                        serial_data <= data[index];
-                    end
-                end
-            end
+        end
 
-            stop_state: begin
-                if(txd_enb) begin
-                    state <= idle_state;
-                    serial_data <= 1'b1;
-                end
-            end
+        DATA: begin
+            if (tx_tick) begin
+                tx <= data_reg[bit_index];
+                bit_index <= bit_index + 1;
 
-            default: begin
-                state <= idle_state;
-                serial_data <= 1'b1;
+                if (bit_index == 7)
+                    state <= STOP;
             end
+        end
+
+        STOP: begin
+            if (tx_tick) begin
+                tx <= 1;
+                state <= IDLE;
+            end
+        end
+
         endcase
     end
+end
 
-    assign busy = (state != idle_state) ? 1'b1 : 1'b0;
 endmodule
-            
-
-

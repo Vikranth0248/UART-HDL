@@ -1,65 +1,87 @@
-module uart_rxd(input clk, rst, serial_in, clr, rxd_enb
-                output reg [7:0] data_out
-                output ready);
+`timescale 1ns/1ps
 
-    parameter start_state = 2'b00;
-    parameter data_state = 2'b01;
-    parameter stop_state = 2'b10;
+module uart_rxd (
+    input clk,
+    input rst,
+    input rx,
+    input rx_tick,
+    output reg [7:0] rx_data,
+    output reg rx_done
+);
 
-    reg [1:0] state = start_state;
-    reg [3:0] sample = 0;
-    reg [3:0] index = 0;
-    reg [7:0] temp_register = 8'b0;
+// Synchronizer
+reg rx_sync1, rx_sync2;
 
-    always@(posedge clk) begin
-        if(rst) begin
-            data_out <= 0;
-            ready <= 0;
-        end
-    end
-    
-    always@(posedge clk) begin
-        if(clr) begin
-            ready <= 0;
-        end
+always @(posedge clk) begin
+    rx_sync1 <= rx;
+    rx_sync2 <= rx_sync1;
+end
 
-        if(rxd_enb) begin
-            case(state) 
-                start_state: begin
-                    if(serial_in == 0 && sample !=0)
-                        sample <= sample + 1'b1;
-                    if(sample == 15) begin
-                        state <= data_state;
-                        sample <= 0;
-                        index <= 0;
-                        temp_register <= 0;
+localparam IDLE=0, START=1, DATA=2, STOP=3;
+
+reg [1:0] state;
+reg [3:0] sample_count;
+reg [3:0] bit_index;
+reg [7:0] data_reg;
+
+always @(posedge clk or posedge rst) begin
+    if (rst) begin
+        state <= IDLE;
+        rx_done <= 0;
+        sample_count <= 0;
+    end else begin
+        rx_done <= 0;
+
+        if (rx_tick) begin
+            case(state)
+
+            IDLE: begin
+                if (rx_sync2 == 0) begin
+                    state <= START;
+                    sample_count <= 0;
+                end
+            end
+
+            // wait half bit (8 samples)
+            START: begin
+                sample_count <= sample_count + 1;
+                if (sample_count == 7) begin
+                    if (rx_sync2 == 0) begin
+                        state <= DATA;
+                        sample_count <= 0;
+                        bit_index <= 0;
+                    end else begin
+                        state <= IDLE;
                     end
                 end
+            end
 
-                data_state: begin
-                    sample <= sample + 1'b1;
-                    if(sample == 4'h8) begin
-                        temp_register[index] <= serial_in;
-                        index <= index + 1'b1;
-                    end
+            DATA: begin
+                sample_count <= sample_count + 1;
 
-                    if(index == 8 && sample == 15)
-                        state <= stop_state;
-                end
+                if (sample_count == 15) begin
+                    sample_count <= 0;
+                    data_reg[bit_index] <= rx_sync2;
+                    bit_index <= bit_index + 1;
 
-                stop_state: begin
-                    if(sample == 15) begin
-                        state <= start_state;
-                        data_out <= temp_register;
-                        sample <= 0;
-                        ready <= 1'b1; 
-                    end
-                    else 
-                        sample <= sample + 1'b1;
+                    if (bit_index == 7)
+                        state <= STOP;
                 end
-                default: begin
-                    state <= start_state;
+            end
+
+            STOP: begin
+                sample_count <= sample_count + 1;
+
+                if (sample_count == 15) begin
+                    rx_data <= data_reg;
+                    rx_done <= 1;
+                    state <= IDLE;
                 end
+            end
+
             endcase
         end
     end
+end
+
+endmodule

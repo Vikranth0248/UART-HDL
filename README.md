@@ -14,3 +14,4 @@ In the process of learning HDL for RTL design, came across some widely used pher
 
 ## Flow Architecture
 
+![alt text](Uart.drawio.png)
